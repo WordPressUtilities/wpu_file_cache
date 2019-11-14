@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.2.0
+Version: 0.3.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -13,6 +13,7 @@ License URI: http://opensource.org/licenses/MIT
 class WPUFileCache {
     private $cache_dir_name = 'wpufilecache';
     private $cache_dir_path = '';
+    private $checked_directories = array();
     public function __construct() {
         add_action('plugins_loaded', array(&$this, 'plugins_loaded'));
     }
@@ -30,33 +31,47 @@ class WPUFileCache {
         }
 
         /* Check if cache dir exists or create it */
-        if (!is_dir($this->cache_dir_path)) {
-            @mkdir($this->cache_dir_path, 0755);
-            @chmod($this->cache_dir_path, 0755);
-            $this->set_protection();
-        }
+        $this->create_directory();
     }
 
     /* ----------------------------------------------------------
       Values
     ---------------------------------------------------------- */
 
-    public function get_value($cache_id) {
-        $cache_file = $this->get_cache_file($cache_id);
+    public function get_value($cache_id, $folder = false) {
+        $cache_file = $this->get_cache_file($cache_id, $folder);
         if ($cache_file && file_exists($cache_file)) {
             return file_get_contents($cache_file);
         }
         return false;
     }
 
-    public function set_value($cache_id, $value) {
-        $cache_file = $this->get_cache_file($cache_id);
+    public function set_value($cache_id, $value, $folder = false) {
+        $cache_file = $this->get_cache_file($cache_id, $folder);
         file_put_contents($cache_file, $value);
     }
 
     /* ----------------------------------------------------------
       Helpers
     ---------------------------------------------------------- */
+
+    /* Create directory */
+    public function create_directory($dir = false) {
+        if (!$dir) {
+            $dir = $this->cache_dir_path;
+        }
+        if (in_array($dir, $this->checked_directories)) {
+            return;
+        }
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755);
+            @chmod($dir, 0755);
+            if ($dir == $this->cache_dir_path) {
+                $this->set_protection();
+            }
+        }
+        $this->checked_directories[] = $dir;
+    }
 
     /* Protection */
     public function set_protection() {
@@ -81,12 +96,20 @@ class WPUFileCache {
         }
     }
 
-    private function get_cache_file($cache_id) {
-        $cache_file = $this->cache_dir_path . '/' . $cache_id;
+    private function get_cache_file($cache_id, $folder = false) {
         if (empty($this->cache_dir_path)) {
             error_log('[WPU File Cache] Error : cache dir empty. Did you wait for "plugins_loaded" ?');
             return false;
         }
+        $cache_file = $this->cache_dir_path;
+        if ($folder) {
+            $folder = sanitize_title($folder);
+            if ($folder) {
+                $cache_file .= '/' . $folder;
+                $this->create_directory($cache_file);
+            }
+        }
+        $cache_file .= '/' . $cache_id;
 
         return $cache_file;
     }
@@ -103,9 +126,9 @@ $WPUFileCache = new WPUFileCache();
  * @param  string  $cache_id  Cache ID
  * @return mixed             (string) value or (bool) false
  */
-function wpufilecache_get($cache_id) {
+function wpufilecache_get($cache_id, $folder = false) {
     global $WPUFileCache;
-    return $WPUFileCache->get_value($cache_id);
+    return $WPUFileCache->get_value($cache_id, $folder);
 }
 
 /**
@@ -114,9 +137,9 @@ function wpufilecache_get($cache_id) {
  * @param  string  $value     (string) value
  * @return void
  */
-function wpufilecache_set($cache_id, $value = '') {
+function wpufilecache_set($cache_id, $value = '', $folder = false) {
     global $WPUFileCache;
-    return $WPUFileCache->set_value($cache_id, $value);
+    return $WPUFileCache->set_value($cache_id, $value, $folder);
 }
 
 /**
