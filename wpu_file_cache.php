@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.3.0
+Version: 0.3.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -86,6 +86,9 @@ class WPUFileCache {
         if (!$target) {
             $target = $this->cache_dir_path;
         }
+        if (strpos($target, $this->cache_dir_path) === false) {
+            $target = $this->cache_dir_path . '/' . $target;
+        }
         if (is_dir($target)) {
             $files = glob($target . '*', GLOB_MARK);
             foreach ($files as $file) {
@@ -146,8 +149,8 @@ function wpufilecache_set($cache_id, $value = '', $folder = false) {
  * Purge cache
  * @return void
  */
-function wpufilecache_purge() {
+function wpufilecache_purge($target = false) {
     global $WPUFileCache;
-    $WPUFileCache->purge_cache();
+    $WPUFileCache->purge_cache($target);
     $WPUFileCache->set_protection();
 }
