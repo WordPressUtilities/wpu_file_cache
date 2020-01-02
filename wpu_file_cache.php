@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.3.1
+Version: 0.3.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -41,7 +41,7 @@ class WPUFileCache {
     public function get_value($cache_id, $folder = false) {
         $cache_file = $this->get_cache_file($cache_id, $folder);
         if ($cache_file && file_exists($cache_file)) {
-            return file_get_contents($cache_file);
+            return apply_filters('wpufilecache_get_value', file_get_contents($cache_file), $cache_id);
         }
         return false;
     }
