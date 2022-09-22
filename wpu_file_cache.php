@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.3.2
+Version: 0.4.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -38,12 +38,15 @@ class WPUFileCache {
       Values
     ---------------------------------------------------------- */
 
-    public function get_value($cache_id, $folder = false) {
+    public function get_value($cache_id, $folder = false, $cacheduration = 0) {
         $cache_file = $this->get_cache_file($cache_id, $folder);
-        if ($cache_file && file_exists($cache_file)) {
-            return apply_filters('wpufilecache_get_value', file_get_contents($cache_file), $cache_id);
+        if (!$cache_file || !file_exists($cache_file)) {
+            return false;
         }
-        return false;
+        if($cacheduration && filemtime($cache_file) + $cacheduration < time()){
+            return false;
+        }
+        return apply_filters('wpufilecache_get_value', file_get_contents($cache_file), $cache_id);
     }
 
     public function set_value($cache_id, $value, $folder = false) {
@@ -129,9 +132,9 @@ $WPUFileCache = new WPUFileCache();
  * @param  string  $cache_id  Cache ID
  * @return mixed             (string) value or (bool) false
  */
-function wpufilecache_get($cache_id, $folder = false) {
+function wpufilecache_get($cache_id, $folder = false, $cacheduration = 0) {
     global $WPUFileCache;
-    return $WPUFileCache->get_value($cache_id, $folder);
+    return $WPUFileCache->get_value($cache_id, $folder, $cacheduration);
 }
 
 /**
