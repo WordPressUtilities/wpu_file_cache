@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.4.0
+Version: 0.5.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -32,6 +32,9 @@ class WPUFileCache {
 
         /* Check if cache dir exists or create it */
         $this->create_directory();
+
+        /* Options */
+        $this->set_oembed_cache();
     }
 
     /* ----------------------------------------------------------
@@ -43,7 +46,7 @@ class WPUFileCache {
         if (!$cache_file || !file_exists($cache_file)) {
             return false;
         }
-        if($cacheduration && filemtime($cache_file) + $cacheduration < time()){
+        if ($cacheduration && filemtime($cache_file) + $cacheduration < time()) {
             return false;
         }
         return apply_filters('wpufilecache_get_value', file_get_contents($cache_file), $cache_id);
@@ -119,6 +122,41 @@ class WPUFileCache {
 
         return $cache_file;
     }
+
+    /* ----------------------------------------------------------
+      Oembed Cache
+    ---------------------------------------------------------- */
+
+    function set_oembed_cache() {
+        if (!apply_filters('wpufilecache_set_oembed_cache', false)) {
+            return;
+        }
+        add_filter('pre_oembed_result', array(&$this, 'pre_oembed_result'), 10, 3);
+        add_filter('oembed_result', array(&$this, 'oembed_result'), 10, 3);
+    }
+
+    function get_oembed_cache_key($url, $args) {
+        return sanitize_title(get_bloginfo('name')) . '_oembed_' . md5($url . json_encode($args));
+    }
+
+    // Return result if available
+    function pre_oembed_result($content = '', $url = '', $args = array()) {
+        $cached_content = $this->get_value($this->get_oembed_cache_key($url, $args), false, 30 * 86400);
+        if (!empty($cached_content) && !is_null($cached_content)) {
+            return $cached_content;
+        }
+        return $content;
+    }
+
+    // Create cache
+    function oembed_result($content = '', $url = '', $args = array()) {
+
+        $this->set_value($this->get_oembed_cache_key($url, $args), $content);
+
+        // Return content
+        return $content;
+    }
+
 }
 
 $WPUFileCache = new WPUFileCache();
