@@ -3,11 +3,14 @@
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.5.0
+Version: 0.6.0
 Author: Darklg
-Author URI: http://darklg.me/
+Author URI: https://darklg.me/
+Text Domain: wpu_file_cache
+Requires at least: 6.2
+Requires PHP: 8.0
 License: MIT License
-License URI: http://opensource.org/licenses/MIT
+License URI: https://opensource.org/licenses/MIT
 */
 
 class WPUFileCache {
@@ -27,7 +30,7 @@ class WPUFileCache {
         /* Get cache dir */
         if (empty($this->cache_dir_path)) {
             $wp_upload_dir = wp_upload_dir();
-            $this->cache_dir_path = $wp_upload_dir['basedir'] . '/' . $this->cache_dir_name;
+            $this->cache_dir_path = WP_CONTENT_DIR . '/cache/' . $this->cache_dir_name;
         }
 
         /* Check if cache dir exists or create it */
@@ -68,6 +71,9 @@ class WPUFileCache {
         }
         if (in_array($dir, $this->checked_directories)) {
             return;
+        }
+        if (!is_dir(WP_CONTENT_DIR . '/cache/')) {
+            mkdir(WP_CONTENT_DIR . '/cache/');
         }
         if (!is_dir($dir)) {
             @mkdir($dir, 0755);
@@ -172,7 +178,10 @@ $WPUFileCache = new WPUFileCache();
  */
 function wpufilecache_get($cache_id, $folder = false, $cacheduration = 0) {
     global $WPUFileCache;
-    return $WPUFileCache->get_value($cache_id, $folder, $cacheduration);
+    if (is_object($WPUFileCache) && method_exists($WPUFileCache, 'get_value')) {
+        return $WPUFileCache->get_value($cache_id, $folder, $cacheduration);
+    }
+    return null;
 }
 
 /**
@@ -183,7 +192,10 @@ function wpufilecache_get($cache_id, $folder = false, $cacheduration = 0) {
  */
 function wpufilecache_set($cache_id, $value = '', $folder = false) {
     global $WPUFileCache;
-    return $WPUFileCache->set_value($cache_id, $value, $folder);
+    if (is_object($WPUFileCache) && method_exists($WPUFileCache, 'set_value')) {
+        return $WPUFileCache->set_value($cache_id, $value, $folder);
+    }
+    return null;
 }
 
 /**
@@ -192,6 +204,8 @@ function wpufilecache_set($cache_id, $value = '', $folder = false) {
  */
 function wpufilecache_purge($target = false) {
     global $WPUFileCache;
-    $WPUFileCache->purge_cache($target);
-    $WPUFileCache->set_protection();
+    if (is_object($WPUFileCache) && method_exists($WPUFileCache, 'purge_cache') && method_exists($WPUFileCache, 'set_protection')) {
+        $WPUFileCache->purge_cache($target);
+        $WPUFileCache->set_protection();
+    }
 }
