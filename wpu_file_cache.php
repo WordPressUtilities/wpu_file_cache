@@ -1,14 +1,16 @@
 <?php
+defined('ABSPATH') || die;
 
 /*
 Plugin Name: WPU File Cache
 Description: Use file system for caching values
-Version: 0.6.0
+Version: 0.7.0
 Author: Darklg
 Author URI: https://darklg.me/
 Text Domain: wpu_file_cache
 Requires at least: 6.2
 Requires PHP: 8.0
+Network: True
 License: MIT License
 License URI: https://opensource.org/licenses/MIT
 */
@@ -16,6 +18,7 @@ License URI: https://opensource.org/licenses/MIT
 class WPUFileCache {
     private $cache_dir_name = 'wpufilecache';
     private $cache_dir_path = '';
+    private $cache_root_dir = '';
     private $checked_directories = array();
     public function __construct() {
         add_action('plugins_loaded', array(&$this, 'plugins_loaded'));
@@ -27,10 +30,12 @@ class WPUFileCache {
 
     public function plugins_loaded() {
 
+        $this->cache_root_dir = apply_filters('wpufilecache_cache_root_dir', WP_CONTENT_DIR . '/cache/');
+        $this->cache_dir_name = apply_filters('wpufilecache_cache_dir_name', $this->cache_dir_name);
+
         /* Get cache dir */
         if (empty($this->cache_dir_path)) {
-            $wp_upload_dir = wp_upload_dir();
-            $this->cache_dir_path = WP_CONTENT_DIR . '/cache/' . $this->cache_dir_name;
+            $this->cache_dir_path = $this->cache_root_dir . $this->cache_dir_name;
         }
 
         /* Check if cache dir exists or create it */
@@ -58,6 +63,7 @@ class WPUFileCache {
     public function set_value($cache_id, $value, $folder = false) {
         $cache_file = $this->get_cache_file($cache_id, $folder);
         file_put_contents($cache_file, $value);
+        chmod($cache_file, 0664);
     }
 
     /* ----------------------------------------------------------
@@ -72,8 +78,8 @@ class WPUFileCache {
         if (in_array($dir, $this->checked_directories)) {
             return;
         }
-        if (!is_dir(WP_CONTENT_DIR . '/cache/')) {
-            mkdir(WP_CONTENT_DIR . '/cache/');
+        if (!is_dir($this->cache_root_dir)) {
+            mkdir($this->cache_root_dir);
         }
         if (!is_dir($dir)) {
             @mkdir($dir, 0755);
@@ -90,6 +96,7 @@ class WPUFileCache {
         $protection = $this->cache_dir_path . '/.htaccess';
         if (!file_exists($protection)) {
             file_put_contents($protection, 'deny from all');
+            chmod($protection, 0644);
         }
     }
 
